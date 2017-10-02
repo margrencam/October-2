@@ -38,3 +38,41 @@ spr_ungram <- dplyr::filter(spr, Condition == "Ungrammatical")
 plot_hist(spr_gram, "Title")
 plot_hist(spr_gram, "Ungrammatical Condition")
 ```
+## Hypothetical version of the data where the two conditions aren't different
+
+```{r}
+plot_hist(spr, "Pooled")
+```
+Fake data:
+
+```{r}
+spr_fake <- spr
+print(spr_fake)
+```
+
+
+The number of data points in the real grammatical condition is
+'nrow(spr_gram)'. The number of data points in the real ungrammatical condition is 'nrow(spr_ungram)'.
+
+Half of the data points in the grammatical condition are below 
+
+
+## 200 Hypothetical versions of the data where the two conditions aren't different
+
+```{r, cache=T}
+N_SAMPLES <- 200
+statistics <- rep(0, N_SAMPLES)
+for (i in 1:N_SAMPLES) {
+  spr_fake <- dplyr::filter(spr_fake, Condition == "Grammatical")
+  spr_fake_gram <- dplyr::filter(spr_fake, Condition == "Ungrammatical")
+  statistics[i] <- median(spr_fake_gram$logRT) - 
+                    median(spr_fake_ungram$logRT)
+}
+statistics_d <- tibble::tibble(MedianDifference=statistics
+)
+print(statistics_d)
+plot_hist_fancy(statistics_d, 
+                "Sampling distribution of difference in medians",
+                "MedianDifference")
+```
+
