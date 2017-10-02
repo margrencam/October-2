@@ -1,0 +1,195 @@
+---
+title: "Classwork October 2"
+author: "Marguerite CAMERON"
+date: "2 octobre 2017"
+output: html_document
+---
+
+---
+title: "Week 2 notes"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, echo=F}
+# THIS IS THE VERSION I WROTE INITIALLY
+plot_hist <- function(d, title) {
+  p <- ggplot2::ggplot(d, ggplot2::aes(x=logRT)) +
+    ggplot2::geom_histogram(fill=fill_colour, colour="black") +
+    ggplot2::ylim(c(0,0.15)) +
+    ggplot2::ggtitle(title)
+  print(p)
+}
+
+# THIS IS THE MORE ADVANCED VERSION
+plot_hist_fancy <- function(d, title,
+                      variable="logRT",
+                      fill_colour="lightgrey",
+                      median_line=T,
+                      line_at=NULL) {
+  p <- ggplot2::ggplot(d,
+                       ggplot2::aes_string(x=variable,
+                                    y="(..count..)/sum(..count..)")) +
+    ggplot2::geom_histogram(fill=fill_colour, colour="black") +
+    ggplot2::ylim(c(0,0.15)) +
+    ggplot2::ggtitle(title)
+  if (median_line) {
+    p <- p + ggplot2::geom_vline(ggplot2::aes(xintercept=median(logRT)),
+                                 lwd=3)
+  }
+  if (!is.null(line_at)) {
+    p <- p + ggplot2::geom_vline(xintercept=line_at,
+                                 colour="red",
+                                 lwd=2)    
+  }
+  print(p)
+}
+
+randomize_rts <- function(d) {
+  result <- dplyr::select(d, Condition, logRT)
+  result$logRT <- sample(result$logRT, nrow(d))
+  return(result)
+}
+
+fraction_above <- function(x, criterion) {
+  n_above <- sum(x > criterion)
+  n <- length(x)
+  return(n_above/n)
+}
+
+fraction_below <- function(x, criterion) {
+  n_below <- sum(x <= criterion)
+  n <- length(x)
+  return(n_below/n)
+}
+
+fraction_between <- function(x, minimum, maximum) {
+  n_between <- sum(x > minimum & x <= maximum)
+  n <- length(x)
+  return(n_between/n)
+}
+
+difference_in_medians <- function(d) {
+  d_gram <- dplyr::filter(d, Condition == "Grammatical")
+  d_ungram <- dplyr::filter(d, Condition == "Ungrammatical")
+  return(median(d_gram$logRT) - median(d_ungram$logRT))
+}
+
+difference_in_fraction <- function(d, minimum=6.5, maximum=7) {
+  d_gram <- dplyr::filter(d, Condition == "Grammatical")
+  d_ungram <- dplyr::filter(d, Condition == "Ungrammatical")
+  return(fraction_between(d_gram$logRT, minimum, maximum) -
+           fraction_between(d_ungram$logRT, minimum, maximum))
+}
+
+sum_of_group <- function(d, group="Grammatical") {
+  d_group <- dplyr::filter(d, Condition == group)
+  return(sum(d_group$logRT))
+}
+
+```
+
+## Basic plots and descriptive statistics
+
+The reaction time data is first transformed using log.
+
+```{r}
+spr <- missingverb::spr_english
+spr$logRT <- log(spr$RT)
+```
+
+Histogram of log reaction times in grammatical and ungrammatical  conditions.
+
+```{r, out.width="400px"}
+spr_gram <- dplyr::filter(spr, Condition == "Grammatical")
+spr_ungram <- dplyr::filter(spr, Condition == "Ungrammatical")
+plot_hist(spr_gram, "Grammatical")
+plot_hist(spr_ungram, "Ungrammatical")
+```
+
+The number of data points in the grammatical condition is `r nrow(spr_gram)`; the number of data points in the ungrammatical condition is `r nrow(spr_ungram)`.
+
+Half of the data points in the grammatical condition are below **`r median(spr_gram$logRT)`**; half of the data points in the ungrammatical condition are below **`r median(spr_ungram$logRT)`**. The difference in the medians is **`r difference_in_medians(spr)`**.
+
+The fraction of the data that is between 6.5 and 7 in the grammatical condition is **`r mean(spr_gram$logRT >= 6.5 & spr_gram$logRT < 7)`**; the fraction of the data that is between 6.5 and 7 in the ungrammatical condition is **`r mean(spr_ungram$logRT >= 6.5 & spr_ungram$logRT < 7)`**. The difference is **`r difference_in_fraction(spr, 6.5, 7)`**
+
+The overall total in the grammatical condition is **`r sum(spr_gram$logRT)`**; the overall total in the ungrammatical condition is **`r sum(spr_ungram$logRT)`**.
+
+
+## Hypothetical version of the data where the two conditions aren't different
+
+Data plotted all together:
+
+```{r}
+plot_hist(spr, "Pooled")
+```
+
+Fake data:
+
+```{r, out.width="300px"}
+spr_fake <- randomize_rts(spr)
+spr_fake_gram <- dplyr::filter(spr_fake, Condition == "Grammatical")
+spr_fake_ungram <- dplyr::filter(spr_fake, Condition == "Ungrammatical")
+plot_hist(spr_fake_gram, "Grammatical (fake)")
+plot_hist(spr_fake_ungram, "Ungrammatical (fake)")
+```
+
+The number of data points in the fake grammatical condition is **`r nrow(spr_fake_gram)`**; the number of data points in the fake ungrammatical condition is **`r nrow(spr_fake_ungram)`**.
+
+Half of the data points in the grammatical condition are below **`r median(spr_fake_gram$logRT)`**; half of the data points in the ungrammatical condition are below **`r median(spr_fake_ungram$logRT)`**. The difference in the medians is **`r difference_in_medians(spr_fake)`**.
+
+The fraction of the data that is between 6.5 and 7 in the grammatical condition is **`r mean(spr_fake_gram$logRT >= 6.5 & spr_fake_gram$logRT < 7)`**; the fraction of the data that is below 7 in the ungrammatical condition is **`r mean(spr_fake_ungram$logRT >= 6.5 & spr_fake_ungram$logRT < 7)`**. The difference is **`r difference_in_fraction(spr_fake, 6.5, 7)`**
+
+The overall total in the grammatical condition is **`r sum(spr_fake_gram$logRT)`**; the overall total in the ungrammatical condition is **`r sum(spr_fake_ungram$logRT)`**.
+
+
+## 1000 hypothetical versions of the data where the two conditions aren't different
+
+Create a thousand fake samples.
+
+```{r, cache=T}
+N_SAMPLES <- 1000
+stat1_difference_in_medians <- rep(0, N_SAMPLES)
+stat2_difference_in_fraction <- rep(0, N_SAMPLES)
+stat3_total_grammatical <- rep(0, N_SAMPLES)
+stat4_total_ungrammatical <- rep(0, N_SAMPLES)
+for (i in 1:N_SAMPLES) {
+  spr_fake <- randomize_rts(spr)
+  spr_fake_gram <- dplyr::filter(spr_fake, Condition == "Grammatical")
+  spr_fake_ungram <- dplyr::filter(spr_fake, Condition == "Ungrammatical")
+  stat1_difference_in_medians[i] <- difference_in_medians(spr_fake)
+  stat2_difference_in_fraction[i] <- difference_in_fraction(spr_fake, 6.5, 7)
+  stat3_total_grammatical[i] <- sum(spr_fake_gram$logRT)
+  stat4_total_ungrammatical[i] <- sum(spr_fake_ungram$logRT)
+}
+statistics <- tibble::tibble(Medians=stat1_difference_in_medians,
+                             Fractions=stat2_difference_in_fraction,
+                             TotalGram=stat3_total_grammatical,
+                             TotalUngram=stat4_total_ungrammatical)
+```
+
+Plot the distribution of the four statistics.
+
+```{r}
+plot_hist_fancy(statistics, "Difference in medians", "Medians", median_line=F,
+          fill_colour="#FFD86D",
+          line_at=difference_in_medians(spr))
+plot_hist_fancy(statistics, "Difference in % between 6.5 and 7", "Fractions", 
+          median_line=F, fill_colour="#FFD86D",
+          line_at=difference_in_fraction(spr, 6.5, 7))
+plot_hist_fancy(statistics, "Total log(RT) - grammatical", "TotalGram", 
+          median_line=F, fill_colour="#FFD86D",
+          line_at=sum(spr_gram$logRT))
+plot_hist_fancy(statistics, "Total log(RT) - ungrammatical", "TotalUngram", 
+          median_line=F, fill_colour="#FFD86D",
+          line_at=sum(spr_ungram$logRT))
+```
+
+**The observed difference in medians is bigger than `r fraction_below(statistics$Medians, difference_in_medians(spr))*100.`% of the samples.**
+
+**The observed difference in the fraction of observations between 6.5 and 7 is bigger than `r fraction_below(statistics$Fractions, difference_in_fraction(spr, 6.5, 7))*100.`% of the samples.**
+
+**The observed overall total logRT in the grammatical cases is bigger than `r fraction_below(statistics$TotalGram, sum(spr_gram$logRT))*100.`% of the samples.**
+
+**The observed overall total logRT in the ungrammatical cases is smaller than `r fraction_above(statistics$TotalUngram, sum(spr_ungram$logRT))*100.`% of the samples.**
